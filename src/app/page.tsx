@@ -1,45 +1,129 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "../lib/supabase";
-
-type Category = { id: number; name: string };
-type County = { id: number; name: string };
-type City = { id: number; name: string; county_id: number };
-type Resource = {
-  id: number;
-  name: string;
-  description: string | null;
-  phone: string | null;
-  website: string | null;
-  tags: string[] | null;
-  category_id: number;
-  county_id: number;
-  city_id: number | null;
-};
+import React from "react";
+import { supabase } from "../lib/supabase"; // keep your relative path if not using "@/"
 
 export default function Home() {
-  // lookups
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [counties, setCounties] = useState<County[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
+  return (
+    <main className="mx-auto max-w-6xl px-4 py-10 md:py-16">
+      {/* Header */}
+      <header className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <LogoMark />
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-brand-plum">
+              MN Resources Finder
+            </h1>
+            <p className="text-sm text-slate-600">Person-centered help, one search away.</p>
+          </div>
+        </div>
+        <nav className="hidden md:flex items-center gap-2">
+          <a className="btn btn-ghost" href="#search">Find resources</a>
+          <a className="btn btn-ghost" href="#how">How it works</a>
+          <a className="btn btn-primary" href="#submit">Request help</a>
+        </nav>
+      </header>
 
-  // filters
-  const [categoryId, setCategoryId] = useState<string>("");
-  const [countyId, setCountyId] = useState<string>("");
-  const [cityId, setCityId] = useState<string>("");
-  const [q, setQ] = useState("");
+      {/* Hero */}
+      <section className="mt-10 md:mt-14 grid md:grid-cols-2 gap-8 items-center">
+        <div className="space-y-4">
+          <h2 className="text-4xl md:text-5xl font-semibold leading-tight text-brand-ink">
+            Find local help for housing, mental health, SUD, and more.
+          </h2>
+          <p className="text-slate-600 text-lg">
+            Choose a resource type, pick your county and city, and get personalized options. If you don’t see what
+            you need, submit a quick request and someone our team will follow up with additional resources.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <a className="btn btn-primary" href="#search">Search resources</a>
+            <a className="btn btn-ghost" href="#submit">Request a resource</a>
+          </div>
+          <div className="flex items-center gap-4 pt-3">
+            <Badge>Free to use</Badge>
+            <Badge>MN counties</Badge>
+            <Badge>Community-curated</Badge>
+          </div>
+        </div>
 
-  // results
-  const [results, setResults] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(false);
+        {/* Hero card: quick entry to search */}
+        <div className="card p-4 md:p-6">
+          <SearchPanel />
+        </div>
+      </section>
 
-  // modal
-  const [showForm, setShowForm] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+      {/* Features / How it works */}
+      <section id="how" className="mt-16 md:mt-24">
+        <h3 className="text-2xl md:text-3xl font-semibold tracking-tight">How it works</h3>
+        <p className="text-slate-600 mt-1">Three simple steps to support-ready results.</p>
 
-  // load lookups
-  useEffect(() => {
+        <div className="grid md:grid-cols-3 gap-4 md:gap-6 mt-6">
+          <StepCard n={1} title="Filter by need">
+            Choose a category (housing, mental health, SUD, peer support, etc.) and set your location.
+          </StepCard>
+          <StepCard n={2} title="Review matches">
+            We show active programs only. Click through to call, visit a site, or read details and tags.
+          </StepCard>
+          <StepCard n={3} title="Request help (optional)">
+            Don’t see it? Send a quick request—no PHI—and we’ll look for additional fits.
+          </StepCard>
+        </div>
+      </section>
+
+      {/* CTA band */}
+      <section id="submit" className="mt-16 md:mt-24 card p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h4 className="text-xl md:text-2xl font-semibold">Can’t find what you need?</h4>
+          <p className="text-slate-600">Submit a request and we’ll follow up with more options.</p>
+        </div>
+        <a className="btn btn-primary" href="#search">Open the search</a>
+      </section>
+
+      {/* Footer */}
+      <footer className="mt-16 md:mt-24 pb-6 text-sm text-slate-500">
+        <div className="border-t border-slate-200 pt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <p>© {new Date().getFullYear()} MN Resources Finder • Built on Next.js + Supabase + Vercel</p>
+          <div className="flex items-center gap-3">
+            <a className="hover:underline" href="https://vercel.com" target="_blank">Vercel</a>
+            <span>•</span>
+            <a className="hover:underline" href="https://supabase.com" target="_blank">Supabase</a>
+          </div>
+        </div>
+      </footer>
+    </main>
+  );
+}
+
+/** --- components (inline for now) --- */
+
+function LogoMark() {
+  return (
+    <div className="h-10 w-10 rounded-2xl bg-brand-plum/90 grid place-items-center text-white">
+      <span className="text-lg font-semibold">MN</span>
+    </div>
+  );
+}
+
+function Badge({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-600">
+      {children}
+    </span>
+  );
+}
+
+/** Drop-in search panel that uses your existing tables.
+ *  You can replace this with your previous full search page later.
+ */
+function SearchPanel() {
+  const [categories, setCategories] = React.useState<{ id: number; name: string }[]>([]);
+  const [counties, setCounties] = React.useState<{ id: number; name: string }[]>([]);
+  const [cities, setCities] = React.useState<{ id: number; name: string; county_id: number }[]>([]);
+
+  const [categoryId, setCategoryId] = React.useState<string>("");
+  const [countyId, setCountyId] = React.useState<string>("");
+  const [cityId, setCityId] = React.useState<string>("");
+
+  React.useEffect(() => {
     (async () => {
       const [{ data: cat }, { data: cou }, { data: ci }] = await Promise.all([
         supabase.from("categories").select("id,name").order("name"),
@@ -52,316 +136,93 @@ export default function Home() {
     })();
   }, []);
 
-  const citiesForCounty = useMemo(
-    () => cities.filter((c) => String(c.county_id) === countyId),
-    [cities, countyId]
+  const citiesForCounty = React.useMemo(() => {
+  // If no county is selected, show all cities statewide
+  if (!countyId) return cities;
+  // Otherwise, show only cities in that county
+  return cities.filter((c) => String(c.county_id) === countyId);
+}, [cities, countyId]
   );
 
-  // search
-  async function search() {
-    setLoading(true);
-    let query: any = supabase.from("resources").select("*");
-    if (categoryId) query = query.eq("category_id", Number(categoryId));
-    if (countyId) query = query.eq("county_id", Number(countyId));
-    if (cityId) query = query.eq("city_id", Number(cityId));
-    if (q) query = query.or(`name.ilike.%${q}%,description.ilike.%${q}%,tags.cs.{${q}}`);
-    const { data, error } = await query.limit(50);
-    if (!error) setResults(data || []);
-    setLoading(false);
+  function goToSearch() {
+    // simple anchor jump for now; you can replace with a dedicated /search route later
+    document.getElementById("search")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  useEffect(() => {
-    // auto-run search when filters change
-    search();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryId, countyId, cityId, q]);
-
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 grid gap-6">
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur border border-slate-200 rounded-2xl p-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">MN Resources Finder</h1>
-          <span className="text-sm text-slate-500">Demo • Supabase + Next.js (free tier)</span>
-        </div>
-      </header>
-
-      {/* Filters */}
-      <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
-        <div className="grid md:grid-cols-4 gap-4">
-          <div className="grid gap-1">
-            <label className="text-sm font-medium">Resource type</label>
-            <select
-              className="rounded-xl border border-slate-300 px-3 py-2"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+    <div id="search" className="grid gap-4">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Field label="Resource type">
+          <select
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
             >
-              <option value="">All types</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid gap-1">
-            <label className="text-sm font-medium">County</label>
-            <select
-              className="rounded-xl border border-slate-300 px-3 py-2"
-              value={countyId}
-              onChange={(e) => {
-                setCountyId(e.target.value);
-                setCityId("");
-              }}
-            >
-              <option value="">All counties</option>
-              {counties.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid gap-1">
-            <label className="text-sm font-medium">City</label>
-            <select
-              className="rounded-xl border border-slate-300 px-3 py-2"
-              value={cityId}
-              onChange={(e) => setCityId(e.target.value)}
-              disabled={!countyId}
-            >
-              <option value="">{countyId ? "All cities" : "Select a county first"}</option>
-              {citiesForCounty.map((ci) => (
-                <option key={ci.id} value={ci.id}>
-                  {ci.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid gap-1">
-            <label className="text-sm font-medium">Keyword</label>
-            <input
-              className="rounded-xl border border-slate-300 px-3 py-2"
-              placeholder="deposit, MAT, food shelf"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center gap-3">
-          <span className="text-sm text-slate-500">
-            {loading ? "Searching…" : `${results.length} result${results.length !== 1 ? "s" : ""}`}
-          </span>
-          <button
-            className="ml-auto rounded-xl px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700"
-            onClick={() => setShowForm(true)}
-          >
-            Don’t see what you need?
-          </button>
-        </div>
-      </section>
-
-      {/* Results */}
-      <section className="grid gap-3">
-        {loading ? (
-          <div className="p-8 text-center text-slate-600">Loading…</div>
-        ) : results.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-600">
-            No results match your filters.
-          </div>
-        ) : (
-          <ul className="grid md:grid-cols-2 gap-4">
-            {results.map((r) => (
-              <li key={r.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="text-lg font-semibold leading-tight">{r.name}</h3>
-                    <p className="text-sm text-slate-500 mt-0.5">
-                      Category #{r.category_id} • County #{r.county_id}
-                    </p>
-                  </div>
-                  {r.website && (
-                    <a href={r.website} target="_blank" rel="noreferrer" className="text-indigo-600 text-sm hover:underline">
-                      Website
-                    </a>
-                  )}
-                </div>
-                {r.description && <p className="mt-3 text-sm leading-6 text-slate-700">{r.description}</p>}
-                {r.tags && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {r.tags.map((t) => (
-                      <span key={t} className="text-xs rounded-full bg-slate-100 border border-slate-200 px-2 py-1">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {r.phone && (
-                  <div className="mt-4 text-sm">
-                    <a href={`tel:${r.phone}`} className="hover:underline">
-                      {r.phone}
-                    </a>
-                  </div>
-                )}
-              </li>
+            <option value="">All types</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </ul>
-        )}
-      </section>
+          </select>
+        </Field>
 
-      {/* Modal form */}
-      {showForm && (
-        <MissingForm
-          onClose={() => setShowForm(false)}
-          onSubmitted={() => {
-            setSubmitted(true);
-            setTimeout(() => setSubmitted(false), 3500);
-          }}
-        />
-      )}
-      {submitted && (
-        <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
-          Thanks! We received your request.
-        </div>
-      )}
+        <Field label="County">
+          <select
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+            value={countyId}
+            onChange={(e) => {
+              setCountyId(e.target.value);
+              setCityId("");
+            }}
+          >
+            <option value="">All counties</option>
+            {counties.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+           ))}
+          </select>
+        </Field>
+
+         <Field label="City">
+           <select
+             className="w-full rounded-xl border border-slate-300 px-3 py-2"
+             value={cityId}
+             onChange={(e) => setCityId(e.target.value)}
+                      >
+             <option value="">{countyId ? "All cities in this county" : "All cities (statewide)"}</option>
+             {citiesForCounty.map((ci) => (
+               <option key={ci.id} value={ci.id}>{ci.name}</option>
+              ))}
+          </select>
+        </Field>
+      </div>
+
+      <button className="btn btn-primary w-full md:w-auto" onClick={goToSearch}>
+        Search resources
+      </button>
+
+      <p className="text-xs text-slate-500">
+        We show active, community-curated programs. Do not submit protected health information (PHI).
+      </p>
     </div>
   );
 }
 
-function MissingForm({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: () => void }) {
-  const [form, setForm] = useState({
-    name: "",
-    contact: "",
-    county_id: "",
-    category_id: "",
-    details: "",
-  });
-  const [lookups, setLookups] = useState<{ categories: Category[]; counties: County[] }>({
-    categories: [],
-    counties: [],
-  });
-
-  useEffect(() => {
-    (async () => {
-      const [{ data: cat }, { data: cou }] = await Promise.all([
-        supabase.from("categories").select("id,name").order("name"),
-        supabase.from("counties").select("id,name").order("name"),
-      ]);
-      setLookups({ categories: cat || [], counties: cou || [] });
-    })();
-  }, []);
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    await supabase.from("submissions").insert({
-      requester_name: form.name,
-      contact: form.contact,
-      county_id: form.county_id ? Number(form.county_id) : null,
-      category_id: form.category_id ? Number(form.category_id) : null,
-      details: form.details,
-    });
-    onSubmitted();
-    onClose();
-  }
-
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <section className="fixed inset-0 z-20 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <form onSubmit={submit} className="relative z-10 w-full max-w-xl bg-white rounded-2xl border border-slate-200 shadow-xl p-6 grid gap-4">
-        <div className="flex items-start justify-between">
-          <h2 className="text-xl font-semibold">Don’t see the resource you need?</h2>
-          <button type="button" onClick={onClose} className="rounded-lg px-3 py-1 text-slate-600 hover:bg-slate-100">
-            ✕
-          </button>
-        </div>
-        <p className="text-sm text-slate-600">Fill this out and our team will reach out with additional options. Do not include PHI.</p>
-
-        <div className="grid md:grid-cols-2 gap-3">
-          <Input label="Your name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
-          <Input label="Best contact (email or phone)" value={form.contact} onChange={(v) => setForm({ ...form, contact: v })} required />
-        </div>
-        <div className="grid md:grid-cols-2 gap-3">
-          <Select
-            label="County"
-            value={form.county_id}
-            onChange={(v) => setForm({ ...form, county_id: v })}
-            options={lookups.counties.map((c) => ({ value: String(c.id), label: c.name }))}
-          />
-          <Select
-            label="Resource type"
-            value={form.category_id}
-            onChange={(v) => setForm({ ...form, category_id: v })}
-            options={lookups.categories.map((c) => ({ value: String(c.id), label: c.name }))}
-          />
-        </div>
-        <div className="grid gap-1">
-          <label className="text-sm font-medium">Tell us what you need</label>
-          <textarea
-            className="rounded-xl border border-slate-300 px-3 py-2 min-h-[96px]"
-            placeholder="Describe the need, urgency, eligibility, insurance, etc."
-            required
-            value={form.details}
-            onChange={(e) => setForm({ ...form, details: e.target.value })}
-          />
-        </div>
-        <button type="submit" className="rounded-xl bg-indigo-600 text-white px-4 py-2 hover:bg-indigo-700">
-          Submit request
-        </button>
-        <p className="text-xs text-slate-500 mt-2">By submitting, you agree to be contacted. Do not include protected health information (PHI).</p>
-      </form>
-    </section>
-  );
-}
-
-function Input({
-  label,
-  value,
-  onChange,
-  required,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  required?: boolean;
-}) {
-  return (
-    <div className="grid gap-1">
+    <div className="grid gap-3">
       <label className="text-sm font-medium">{label}</label>
-      <input
-        className="rounded-xl border border-slate-300 px-3 py-2"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        required={required}
-      />
+      {children}
     </div>
   );
 }
 
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}) {
+function StepCard({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
-    <div className="grid gap-1">
-      <label className="text-sm font-medium">{label}</label>
-      <select className="rounded-xl border border-slate-300 px-3 py-2" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">Select</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+    <div className="card p-5">
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 rounded-full bg-brand-rose/15 text-brand-plum grid place-items-center font-semibold">{n}</div>
+        <h4 className="text-lg font-semibold">{title}</h4>
+      </div>
+      <p className="text-slate-600 mt-2">{children}</p>
     </div>
   );
 }

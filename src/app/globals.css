@@ -1,20 +1,22 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Load Tailwind v4 */
+@import "tailwindcss";
 
-/* variables and styles below… */
-:root {
+/* (Optional) Let @apply see Tailwind utilities anywhere */
+@reference "tailwindcss";
+
+/* Brand colors so classes like bg-brand-plum work */
+@theme {
+  --color-brand-rose: #B56A7A;
+  --color-brand-plum: #5A375E;
+  --color-brand-gold: #C89B3C;
+  --color-brand-ink:  #1F1D29;
+
+  /* keep common tokens if you want */
   --background: #ffffff;
   --foreground: #171717;
 }
 
-:root {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* Light/Dark variables (optional) */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -22,8 +24,29 @@
   }
 }
 
+/* Background flourish */
+html, body { min-height: 100%; }
 body {
-  background: var(--background);
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(181,106,122,0.09), transparent 60%),
+    radial-gradient(1200px 600px at 110% 10%, rgba(90,55,94,0.08), transparent 60%),
+    #faf9fb;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Put all @apply rules inside a Tailwind layer */
+@layer components {
+  .card {
+    @apply bg-white border border-slate-200 rounded-2xl shadow-sm;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium transition;
+  }
+  .btn-primary {
+    @apply bg-brand-plum text-white hover:bg-brand-rose;
+  }
+  .btn-ghost {
+    @apply bg-white/70 hover:bg-white border border-slate-200;
+  }
 }
