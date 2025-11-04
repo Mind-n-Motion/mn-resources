@@ -20,7 +20,7 @@ export default function Home() {
         <nav className="hidden md:flex items-center gap-2">
           <a className="btn btn-ghost" href="#search">Find resources</a>
           <a className="btn btn-ghost" href="#how">How it works</a>
-          <a className="btn btn-primary" href="#submit">Request help</a>
+          <a className="btn btn-primary" href="/request">Request help</a>
         </nav>
       </header>
 
@@ -32,11 +32,11 @@ export default function Home() {
           </h2>
           <p className="text-slate-600 text-lg">
             Choose a resource type, pick your county and city, and get personalized options. If you don’t see what
-            you need, submit a quick request and someone our team will follow up with additional resources.
+            you need, submit a quick request and someone from our team will follow up with additional resources.
           </p>
           <div className="flex flex-wrap gap-3">
             <a className="btn btn-primary" href="#search">Search resources</a>
-            <a className="btn btn-ghost" href="#submit">Request a resource</a>
+            <a className="btn btn-ghost" href="/request">Request a resource</a>
           </div>
           <div className="flex items-center gap-4 pt-3">
             <Badge>Free to use</Badge>
@@ -75,7 +75,7 @@ export default function Home() {
           <h4 className="text-xl md:text-2xl font-semibold">Can’t find what you need?</h4>
           <p className="text-slate-600">Submit a request and we’ll follow up with more options.</p>
         </div>
-        <a className="btn btn-primary" href="#search">Open the search</a>
+        <a className="btn btn-primary" href="/request">Request help</a>
       </section>
 
       {/* Footer */}
