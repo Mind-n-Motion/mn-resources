@@ -139,6 +139,7 @@ function SearchPanel() {
   const [results, setResults] = React.useState<ResourceRow[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [q, setQ] = React.useState("");
 
   React.useEffect(() => {
     (async () => {
@@ -171,7 +172,10 @@ function SearchPanel() {
     if (countyId) query = query.eq("county_id", Number(countyId));
     if (cityId) query = query.eq("city_id", Number(cityId));
 
+    if (q.trim()) query = query.textSearch("fts", q.trim(), { type: "websearch" });
+
     const { data, error } = await query.order("name", { ascending: true });
+    
     if (error) {
       setError(error.message);
       setResults([]);
@@ -239,6 +243,22 @@ function SearchPanel() {
           </select>
         </Field>
       </div>
+      
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Field label="Search keywords">
+         <input
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+            placeholder="Search by name, description, or tags"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+           />
+         </Field>
+
+         {/* ...your three existing Field blocks for Category, County, City */}
+         {/* Category */}
+         {/* County */}
+         {/* City */}
+       </div>
 
       <button className="btn btn-primary w-full md:w-auto" onClick={fetchResources}>
         {loading ? "Searching…" : "Search resources"}
