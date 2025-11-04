@@ -123,6 +123,23 @@ function SearchPanel() {
   const [countyId, setCountyId] = React.useState<string>("");
   const [cityId, setCityId] = React.useState<string>("");
 
+  type ResourceRow = {
+    id: number;
+    name: string;
+    description: string | null;
+    phone: string | null;
+    website: string | null;
+    tags: string[] | null;
+    status: "active" | "inactive" | "pending";
+    category_id: number;
+    county_id: number;
+    city_id: number | null;
+  };
+
+  const [results, setResults] = React.useState<ResourceRow[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
   React.useEffect(() => {
     (async () => {
       const [{ data: cat }, { data: cou }, { data: ci }] = await Promise.all([
@@ -136,28 +153,49 @@ function SearchPanel() {
     })();
   }, []);
 
+  // Show ALL cities if no county is selected; otherwise filter
   const citiesForCounty = React.useMemo(() => {
-  // If no county is selected, show all cities statewide
-  if (!countyId) return cities;
-  // Otherwise, show only cities in that county
-  return cities.filter((c) => String(c.county_id) === countyId);
-}, [cities, countyId]
-  );
+    if (!countyId) return cities;
+    return cities.filter((c) => String(c.county_id) === countyId);
+  }, [cities, countyId]);
 
-  function goToSearch() {
-    // simple anchor jump for now; you can replace with a dedicated /search route later
-    document.getElementById("search")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  async function fetchResources() {
+    setLoading(true);
+    setError(null);
+    let query = supabase
+      .from("resources")
+      .select("id,name,description,phone,website,tags,status,category_id,county_id,city_id")
+      .eq("status", "active");
+
+    if (categoryId) query = query.eq("category_id", Number(categoryId));
+    if (countyId) query = query.eq("county_id", Number(countyId));
+    if (cityId) query = query.eq("city_id", Number(cityId));
+
+    const { data, error } = await query.order("name", { ascending: true });
+    if (error) {
+      setError(error.message);
+      setResults([]);
+    } else {
+      setResults(data ?? []);
+    }
+    setLoading(false);
+  }
+
+  function nameById<T extends { id: number; name: string }>(arr: T[], id?: number | null) {
+    if (id == null) return "";
+    return arr.find((x) => x.id === id)?.name ?? "";
   }
 
   return (
     <div id="search" className="grid gap-4">
+      {/* Filters */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <Field label="Resource type">
           <select
             className="w-full rounded-xl border border-slate-300 px-3 py-2"
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            >
+          >
             <option value="">All types</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
@@ -170,38 +208,83 @@ function SearchPanel() {
             className="w-full rounded-xl border border-slate-300 px-3 py-2"
             value={countyId}
             onChange={(e) => {
-              setCountyId(e.target.value);
-              setCityId("");
+              const newCountyId = e.target.value;
+              setCountyId(newCountyId);
+              // If switching to a specific county and current city isn’t in it, clear city
+              if (newCountyId && cityId) {
+                const stillValid = cities.some(
+                  (ci) => String(ci.id) === cityId && String(ci.county_id) === newCountyId
+                );
+                if (!stillValid) setCityId("");
+              }
             }}
           >
             <option value="">All counties</option>
             {counties.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
-           ))}
+            ))}
           </select>
         </Field>
 
-         <Field label="City">
-           <select
-             className="w-full rounded-xl border border-slate-300 px-3 py-2"
-             value={cityId}
-             onChange={(e) => setCityId(e.target.value)}
-                      >
-             <option value="">{countyId ? "All cities in this county" : "All cities (statewide)"}</option>
-             {citiesForCounty.map((ci) => (
-               <option key={ci.id} value={ci.id}>{ci.name}</option>
-              ))}
+        <Field label="City">
+          <select
+            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+            value={cityId}
+            onChange={(e) => setCityId(e.target.value)}
+          >
+            <option value="">{countyId ? "All cities in this county" : "All cities (statewide)"}</option>
+            {citiesForCounty.map((ci) => (
+              <option key={ci.id} value={ci.id}>{ci.name}</option>
+            ))}
           </select>
         </Field>
       </div>
 
-      <button className="btn btn-primary w-full md:w-auto" onClick={goToSearch}>
-        Search resources
+      <button className="btn btn-primary w-full md:w-auto" onClick={fetchResources}>
+        {loading ? "Searching…" : "Search resources"}
       </button>
 
-      <p className="text-xs text-slate-500">
-        We show active, community-curated programs. Do not submit protected health information (PHI).
-      </p>
+      {error && <p className="text-sm text-red-600">Error: {error}</p>}
+
+      {/* Results */}
+      <div className="mt-4 grid gap-4">
+        {loading && <p className="text-slate-600">Loading results…</p>}
+        {!loading && results.length === 0 && (
+          <p className="text-slate-600">No matches yet. Try different filters or click “Search resources”.</p>
+        )}
+        {results.map((r) => (
+          <div key={r.id} className="card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h5 className="text-lg font-semibold">{r.name}</h5>
+                <p className="text-sm text-slate-600">
+                  {nameById(categories, r.category_id)}
+                  {" • "}
+                  {nameById(counties, r.county_id)}
+                  {r.city_id ? ` • ${nameById(cities, r.city_id)}` : ""}
+                </p>
+              </div>
+              <span className="text-xs rounded-full border px-2 py-0.5">
+                {r.status}
+              </span>
+            </div>
+
+            {r.description && <p className="mt-2 text-slate-700">{r.description}</p>}
+
+            <div className="mt-3 flex flex-wrap gap-3 text-sm">
+              {r.phone && <a className="underline" href={`tel:${r.phone}`}>{r.phone}</a>}
+              {r.website && <a className="underline" href={r.website} target="_blank">Website</a>}
+              {Array.isArray(r.tags) && r.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {r.tags.map((t, i) => (
+                    <span key={i} className="rounded-full bg-slate-100 px-2 py-0.5 text-xs">{t}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
