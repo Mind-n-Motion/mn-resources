@@ -58,7 +58,7 @@ export default function Home() {
 
         <div className="grid md:grid-cols-3 gap-4 md:gap-6 mt-6">
           <StepCard n={1} title="Filter by need">
-            Choose a category (food resources, housing, mental health, peer support, etc.) and set your location.
+            Choose a category (food, housing, mental health, peer support, etc.) and set your location.
           </StepCard>
           <StepCard n={2} title="Review matches">
             We show active programs only. Click through to call, visit a site, or read details and tags.
@@ -126,11 +126,6 @@ function SearchPanel() {
   const [q, setQ] = React.useState("");
   const [debouncedQ, setDebouncedQ] = React.useState("");
 
-  React.useEffect(() => {
-    const id = setTimeout(() => setDebouncedQ(q.trim()), 300);
-    return () => clearTimeout(id);
-  }, [q]);
-
   type ResourceRow = {
     id: number;
     name: string;
@@ -166,7 +161,7 @@ function SearchPanel() {
     return cities.filter((c) => String(c.county_id) === countyId);
   }, [cities, countyId]);
 
-  async function fetchResources() {
+  const fetchResources = React.useCallback(async function fetchResources() {
     setLoading(true);
     setError(null);
 
@@ -192,8 +187,19 @@ function SearchPanel() {
       setResults(data ?? []);
     }
     setLoading(false);
-  }
+  }, [categoryId, countyId, cityId, debouncedQ]);
 
+  React.useEffect(() => {
+    fetchResources();
+  }, [fetchResources]);
+
+  function onKeywordKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      setDebouncedQ(q.trim());
+      fetchResources();
+    }
+  }
   return (
     <div id="search" className="grid gap-4">
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -246,28 +252,31 @@ function SearchPanel() {
         </Field>
       </div>
 
-      {/* Keyword input */}
+      {/* Keywords */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <Field label="Search keywords">
           <input
             className="w-full rounded-xl border border-slate-300 px-3 py-2"
-            placeholder="Search by name, description, or tags"
+            placeholder="e.g. rent help, therapy, sober housing"
             value={q}
             onChange={(e) => setQ(e.target.value)}
+            onKeyDown={onKeywordKeyDown}   // ← Enter triggers search
           />
         </Field>
       </div>
 
-      <button className="btn btn-primary w-full md:w-auto" onClick={fetchResources}>
+      {/* Keep the button as an explicit action too (optional) */}
+      <button className="btn btn-primary w-full md:w-auto" onClick={fetchResources} disabled={loading}>
         {loading ? "Searching…" : "Search resources"}
       </button>
 
       {error && <p className="text-sm text-red-600">Error: {error}</p>}
 
+      {/* Results */}
       <div className="mt-4 grid gap-4">
         {loading && <p className="text-slate-600">Loading results…</p>}
         {!loading && results.length === 0 && (
-          <p className="text-slate-600">No matches yet. Try different filters or click “Search resources”.</p>
+          <p className="text-slate-600">No matches yet. Try fewer words or different filters.</p>
         )}
         {results.map((r) => (
           <div key={r.id} className="card p-4">
@@ -281,13 +290,9 @@ function SearchPanel() {
                   {r.city_id ? ` • ${cities.find(x => x.id === r.city_id)?.name ?? ""}` : ""}
                 </p>
               </div>
-              <span className="text-xs rounded-full border px-2 py-0.5">
-                {r.status}
-              </span>
+              <span className="text-xs rounded-full border px-2 py-0.5">{r.status}</span>
             </div>
-
             {r.description && <p className="mt-2 text-slate-700">{r.description}</p>}
-
             <div className="mt-3 flex flex-wrap gap-3 text-sm">
               {r.phone && <a className="underline" href={`tel:${r.phone}`}>{r.phone}</a>}
               {r.website && <a className="underline" href={r.website} target="_blank" rel="noreferrer">Website</a>}
