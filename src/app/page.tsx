@@ -123,8 +123,16 @@ function SearchPanel() {
   const [countyId, setCountyId] = React.useState<string>("");
   const [cityId, setCityId] = React.useState<string>("");
 
+  // keywords + debounce
   const [q, setQ] = React.useState("");
   const [debouncedQ, setDebouncedQ] = React.useState("");
+  React.useEffect(() => {
+    const id = setTimeout(() => setDebouncedQ(q.trim()), 300);
+    return () => clearTimeout(id);
+  }, [q]);
+
+  // user interaction gate (prevents initial fetch)
+  const [hasInteracted, setHasInteracted] = React.useState(false);
 
   type ResourceRow = {
     id: number;
@@ -143,6 +151,7 @@ function SearchPanel() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  // reference data
   React.useEffect(() => {
     (async () => {
       const [{ data: cat }, { data: cou }, { data: ci }] = await Promise.all([
@@ -156,12 +165,13 @@ function SearchPanel() {
     })();
   }, []);
 
+  // cities filtered by county (or all if none)
   const citiesForCounty = React.useMemo(() => {
     if (!countyId) return cities;
     return cities.filter((c) => String(c.county_id) === countyId);
   }, [cities, countyId]);
 
-  const fetchResources = React.useCallback(async function fetchResources() {
+  const fetchResources = React.useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -173,13 +183,9 @@ function SearchPanel() {
     if (categoryId) query = query.eq("category_id", Number(categoryId));
     if (countyId)   query = query.eq("county_id", Number(countyId));
     if (cityId)     query = query.eq("city_id", Number(cityId));
-
-    if (debouncedQ) {
-      query = query.textSearch("fts", debouncedQ, { type: "websearch" });
-    }
+    if (debouncedQ) query = query.textSearch("fts", debouncedQ, { type: "websearch" });
 
     const { data, error } = await query.order("name", { ascending: true });
-
     if (error) {
       setError(error.message);
       setResults([]);
@@ -189,25 +195,33 @@ function SearchPanel() {
     setLoading(false);
   }, [categoryId, countyId, cityId, debouncedQ]);
 
+  // auto-search only after user interaction + something set
   React.useEffect(() => {
-    fetchResources();
-  }, [fetchResources]);
+    const somethingSelected = !!(debouncedQ || categoryId || countyId || cityId);
+    if (hasInteracted && somethingSelected) {
+      fetchResources();
+    }
+  }, [fetchResources, hasInteracted, debouncedQ, categoryId, countyId, cityId]);
 
+  // Enter-to-search in keyword box
   function onKeywordKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
       setDebouncedQ(q.trim());
+      setHasInteracted(true);
       fetchResources();
     }
   }
+
   return (
     <div id="search" className="grid gap-4">
+      {/* Filters */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <Field label="Resource type">
           <select
             className="w-full rounded-xl border border-slate-300 px-3 py-2"
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
+            onChange={(e) => { setCategoryId(e.target.value); setHasInteracted(true); }}
           >
             <option value="">All types</option>
             {categories.map((c) => (
@@ -223,6 +237,7 @@ function SearchPanel() {
             onChange={(e) => {
               const newCountyId = e.target.value;
               setCountyId(newCountyId);
+              setHasInteracted(true);
               if (newCountyId && cityId) {
                 const stillValid = cities.some(
                   (ci) => String(ci.id) === cityId && String(ci.county_id) === newCountyId
@@ -242,7 +257,7 @@ function SearchPanel() {
           <select
             className="w-full rounded-xl border border-slate-300 px-3 py-2"
             value={cityId}
-            onChange={(e) => setCityId(e.target.value)}
+            onChange={(e) => { setCityId(e.target.value); setHasInteracted(true); }}
           >
             <option value="">{countyId ? "All cities in this county" : "All cities (statewide)"}</option>
             {citiesForCounty.map((ci) => (
@@ -252,21 +267,21 @@ function SearchPanel() {
         </Field>
       </div>
 
-      {/* Keywords */}
+      {/* Keyword input */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <Field label="Search keywords">
           <input
             className="w-full rounded-xl border border-slate-300 px-3 py-2"
             placeholder="e.g. rent help, therapy, sober housing"
             value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={onKeywordKeyDown}   // ← Enter triggers search
+            onChange={(e) => { setQ(e.target.value); setHasInteracted(true); }}
+            onKeyDown={onKeywordKeyDown}
           />
         </Field>
       </div>
 
-      {/* Keep the button as an explicit action too (optional) */}
-      <button className="btn btn-primary w-full md:w-auto" onClick={fetchResources} disabled={loading}>
+      {/* Optional explicit search button */}
+      <button className="btn btn-primary w-full md:w-auto" onClick={() => { setHasInteracted(true); fetchResources(); }} disabled={loading}>
         {loading ? "Searching…" : "Search resources"}
       </button>
 
@@ -274,8 +289,11 @@ function SearchPanel() {
 
       {/* Results */}
       <div className="mt-4 grid gap-4">
-        {loading && <p className="text-slate-600">Loading results…</p>}
-        {!loading && results.length === 0 && (
+        {!hasInteracted && (
+          <p className="text-slate-600">Tip: start by typing a keyword or choosing a filter.</p>
+        )}
+        {hasInteracted && loading && <p className="text-slate-600">Loading results…</p>}
+        {hasInteracted && !loading && results.length === 0 && (
           <p className="text-slate-600">No matches yet. Try fewer words or different filters.</p>
         )}
         {results.map((r) => (
