@@ -28,7 +28,7 @@ export default function Home() {
       <section className="mt-10 md:mt-14 grid md:grid-cols-2 gap-8 items-center">
         <div className="space-y-4">
           <h2 className="text-4xl md:text-5xl font-semibold leading-tight text-brand-ink">
-            Find local help for housing, mental health, SUD, and more.
+            Find local help for housing, food resources, mental health, and more.
           </h2>
           <p className="text-slate-600 text-lg">
             Choose a resource type, pick your county and city, and get personalized options. If you don’t see what
@@ -41,7 +41,7 @@ export default function Home() {
           <div className="flex items-center gap-4 pt-3">
             <Badge>Free to use</Badge>
             <Badge>MN counties</Badge>
-            <Badge>Community-curated</Badge>
+            <Badge>Community-based</Badge>
           </div>
         </div>
 
@@ -58,7 +58,7 @@ export default function Home() {
 
         <div className="grid md:grid-cols-3 gap-4 md:gap-6 mt-6">
           <StepCard n={1} title="Filter by need">
-            Choose a category (housing, mental health, SUD, peer support, etc.) and set your location.
+            Choose a category (food resources, housing, mental health, peer support, etc.) and set your location.
           </StepCard>
           <StepCard n={2} title="Review matches">
             We show active programs only. Click through to call, visit a site, or read details and tags.
@@ -81,7 +81,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-16 md:mt-24 pb-6 text-sm text-slate-500">
         <div className="border-t border-slate-200 pt-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} MN Resources Finder • Built on Next.js + Supabase + Vercel</p>
+          <p>© {new Date().getFullYear()} MN Resources Finder • Built on Next.js + Supabase + Vercel by Nicole Danielle</p>
           <div className="flex items-center gap-3">
             <a className="hover:underline" href="https://vercel.com" target="_blank">Vercel</a>
             <span>•</span>
@@ -111,7 +111,7 @@ function Badge({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Drop-in search panel that uses your existing tables.
+/** Drop-in search panel that uses existing tables.
  *  You can replace this with your previous full search page later.
  */
 function SearchPanel() {
@@ -122,6 +122,14 @@ function SearchPanel() {
   const [categoryId, setCategoryId] = React.useState<string>("");
   const [countyId, setCountyId] = React.useState<string>("");
   const [cityId, setCityId] = React.useState<string>("");
+
+  const [q, setQ] = React.useState("");
+  const [debouncedQ, setDebouncedQ] = React.useState("");
+
+  React.useEffect(() => {
+    const id = setTimeout(() => setDebouncedQ(q.trim()), 300);
+    return () => clearTimeout(id);
+  }, [q]);
 
   type ResourceRow = {
     id: number;
@@ -139,7 +147,6 @@ function SearchPanel() {
   const [results, setResults] = React.useState<ResourceRow[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [q, setQ] = React.useState("");
 
   React.useEffect(() => {
     (async () => {
@@ -154,7 +161,6 @@ function SearchPanel() {
     })();
   }, []);
 
-  // Show ALL cities if no county is selected; otherwise filter
   const citiesForCounty = React.useMemo(() => {
     if (!countyId) return cities;
     return cities.filter((c) => String(c.county_id) === countyId);
@@ -163,19 +169,22 @@ function SearchPanel() {
   async function fetchResources() {
     setLoading(true);
     setError(null);
+
     let query = supabase
       .from("resources")
       .select("id,name,description,phone,website,tags,status,category_id,county_id,city_id")
       .eq("status", "active");
 
     if (categoryId) query = query.eq("category_id", Number(categoryId));
-    if (countyId) query = query.eq("county_id", Number(countyId));
-    if (cityId) query = query.eq("city_id", Number(cityId));
+    if (countyId)   query = query.eq("county_id", Number(countyId));
+    if (cityId)     query = query.eq("city_id", Number(cityId));
 
-    if (q.trim()) query = query.textSearch("fts", q.trim(), { type: "websearch" });
+    if (debouncedQ) {
+      query = query.textSearch("fts", debouncedQ, { type: "websearch" });
+    }
 
     const { data, error } = await query.order("name", { ascending: true });
-    
+
     if (error) {
       setError(error.message);
       setResults([]);
@@ -185,14 +194,8 @@ function SearchPanel() {
     setLoading(false);
   }
 
-  function nameById<T extends { id: number; name: string }>(arr: T[], id?: number | null) {
-    if (id == null) return "";
-    return arr.find((x) => x.id === id)?.name ?? "";
-  }
-
   return (
     <div id="search" className="grid gap-4">
-      {/* Filters */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <Field label="Resource type">
           <select
@@ -214,7 +217,6 @@ function SearchPanel() {
             onChange={(e) => {
               const newCountyId = e.target.value;
               setCountyId(newCountyId);
-              // If switching to a specific county and current city isn’t in it, clear city
               if (newCountyId && cityId) {
                 const stillValid = cities.some(
                   (ci) => String(ci.id) === cityId && String(ci.county_id) === newCountyId
@@ -243,22 +245,18 @@ function SearchPanel() {
           </select>
         </Field>
       </div>
-      
+
+      {/* Keyword input */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <Field label="Search keywords">
-         <input
+          <input
             className="w-full rounded-xl border border-slate-300 px-3 py-2"
             placeholder="Search by name, description, or tags"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-           />
-         </Field>
-
-         {/* ...your three existing Field blocks for Category, County, City */}
-         {/* Category */}
-         {/* County */}
-         {/* City */}
-       </div>
+          />
+        </Field>
+      </div>
 
       <button className="btn btn-primary w-full md:w-auto" onClick={fetchResources}>
         {loading ? "Searching…" : "Search resources"}
@@ -266,7 +264,6 @@ function SearchPanel() {
 
       {error && <p className="text-sm text-red-600">Error: {error}</p>}
 
-      {/* Results */}
       <div className="mt-4 grid gap-4">
         {loading && <p className="text-slate-600">Loading results…</p>}
         {!loading && results.length === 0 && (
@@ -278,10 +275,10 @@ function SearchPanel() {
               <div>
                 <h5 className="text-lg font-semibold">{r.name}</h5>
                 <p className="text-sm text-slate-600">
-                  {nameById(categories, r.category_id)}
+                  {categories.find(x => x.id === r.category_id)?.name ?? ""}
                   {" • "}
-                  {nameById(counties, r.county_id)}
-                  {r.city_id ? ` • ${nameById(cities, r.city_id)}` : ""}
+                  {counties.find(x => x.id === r.county_id)?.name ?? ""}
+                  {r.city_id ? ` • ${cities.find(x => x.id === r.city_id)?.name ?? ""}` : ""}
                 </p>
               </div>
               <span className="text-xs rounded-full border px-2 py-0.5">
@@ -293,7 +290,7 @@ function SearchPanel() {
 
             <div className="mt-3 flex flex-wrap gap-3 text-sm">
               {r.phone && <a className="underline" href={`tel:${r.phone}`}>{r.phone}</a>}
-              {r.website && <a className="underline" href={r.website} target="_blank">Website</a>}
+              {r.website && <a className="underline" href={r.website} target="_blank" rel="noreferrer">Website</a>}
               {Array.isArray(r.tags) && r.tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {r.tags.map((t, i) => (
