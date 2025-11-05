@@ -25,8 +25,8 @@ export default function Home() {
       </header>
 
       {/* Hero */}
-      <section className="mt-10 md:mt-14 grid md:grid-cols-2 gap-8 items-center">
-        <div className="space-y-4">
+      <section className="mt-10 md:mt-14 grid md:grid-cols-2 gap-8 items-start">
+        <div className="space-y-4 md:sticky md:top-10">
           <h2 className="text-4xl md:text-5xl font-semibold leading-tight text-brand-ink">
             Find local help for housing, food resources, mental health, and more.
           </h2>
