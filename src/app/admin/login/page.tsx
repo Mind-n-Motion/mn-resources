@@ -1,29 +1,40 @@
 "use client";
+import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import React from "react";
 
-export default function AdminLogin() {
-  const [email, setEmail] = React.useState("");
-  const [msg, setMsg] = React.useState<string | null>(null);
-  const [err, setErr] = React.useState<string | null>(null);
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
-  async function sendLink(e: React.FormEvent) {
-    e.preventDefault();
-    setMsg(null); setErr(null);
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.origin + "/admin/submissions" }});
-    if (error) setErr(error.message);
-    else setMsg("Check your email for the magic link.");
+  async function sendLink() {
+    setError("");
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    const redirectTo = `${base}/admin/submissions`;
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo },
+    });
+    if (error) setError(error.message);
+    else setSent(true);
   }
 
   return (
-    <main className="mx-auto max-w-sm p-6 card">
-      <h1 className="text-xl font-semibold mb-4">Admin Sign In</h1>
-      <form onSubmit={sendLink} className="grid gap-3">
-        <input className="rounded-xl border px-3 py-2" placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)} />
-        <button className="btn btn-primary" type="submit">Send magic link</button>
-        {msg && <p className="text-green-700 text-sm">{msg}</p>}
-        {err && <p className="text-red-600 text-sm">{err}</p>}
-      </form>
+    <main className="max-w-md mx-auto p-6">
+      <h1 className="text-2xl font-semibold mb-4">Admin Login</h1>
+      {sent ? (
+        <p className="text-green-600">✅ Magic link sent! Check your email.</p>
+      ) : (
+        <>
+          <input className="w-full border px-3 py-2 rounded mb-3"
+                 type="email" value={email}
+                 onChange={(e) => setEmail(e.target.value)}
+                 placeholder="you@example.com" />
+          <button onClick={sendLink} className="btn btn-primary w-full">Send login link</button>
+          {error && <p className="text-red-600 mt-2">{error}</p>}
+        </>
+      )}
     </main>
   );
 }
