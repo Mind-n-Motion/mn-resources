@@ -37,6 +37,7 @@ export default function Home() {
           <div className="flex flex-wrap gap-3">
             <a className="btn btn-primary" href="#search">Search resources</a>
             <a className="btn btn-ghost" href="/request">Request a resource</a>
+            <a className="btn btn-ghost" href="/suggest">Suggest a resource</a>
           </div>
           <div className="flex items-center gap-4 pt-3">
             <Badge>Free to use</Badge>
